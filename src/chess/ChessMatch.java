@@ -23,6 +23,7 @@ public class ChessMatch {
     private boolean check;
     private boolean checkMate;
     private ChessPiece enPassantVulnerable;
+    private ChessPiece promoted;
 
     public ChessMatch() {
         board = new Board(8, 8);
@@ -62,6 +63,10 @@ public class ChessMatch {
 
     public ChessPiece getEnPassantVulnerable() {
         return enPassantVulnerable;
+    }
+
+    public ChessPiece getPromoted() {
+        return promoted;
     }
 
     private void nextTurn() {
@@ -197,6 +202,15 @@ public class ChessMatch {
 
         ChessPiece movedPiece = (ChessPiece) board.piece(target);
 
+        // special move promotion
+        promoted = null;
+        if (movedPiece instanceof Pawn) {
+            if (movedPiece.getColor() == Color.WHITE && target.getRow() == 0 || movedPiece.getColor() == Color.BLACK && target.getRow() == 7) {
+                promoted = (ChessPiece) board.piece(target);
+                promoted = replacePromotedPiece("Q");
+            }
+        }
+
         check = testCheck(opponent(currentPlayer));
 
         if (testCheckMate(opponent(currentPlayer))) {
@@ -311,5 +325,33 @@ public class ChessMatch {
         }
 
         return true;
+    }
+
+    public ChessPiece replacePromotedPiece(String type) {
+        if (promoted == null) {
+            throw new IllegalStateException("There is no piece to be promoted.");
+        }
+        if (!type.equals("B") && !type.equals("N") && !type.equals("R") && !type.equals("Q")) {
+            throw new IllegalArgumentException("Invalid type for promotion");
+        }
+
+        Position promotedPiecePosition = promoted.getChessPosition().toPosition();
+        Piece piece = board.removePiece(promotedPiecePosition);
+        piecesOnTheBoard.remove(piece);
+
+        piece = newPiece(type, promoted.getColor());
+        board.placePiece(piece, promotedPiecePosition);
+        piecesOnTheBoard.add(piece);
+
+        return (ChessPiece) piece;
+    }
+
+    private ChessPiece newPiece(String type, Color color) {
+        return switch (type) {
+            case "B" -> new Bishop(board, color);
+            case "N" -> new Knight(board, color);
+            case "R" -> new Rook(board, color);
+            default -> new Queen(board, color);
+        };
     }
 }
